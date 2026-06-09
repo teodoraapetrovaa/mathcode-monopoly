@@ -172,10 +172,14 @@ io.on('connection', (socket) => {
     if (room.players.length >= 4) { socket.emit('error_msg', 'Стаята е пълна (макс. 4 играчи)!'); return; }
 
     room.players.push({ name: playerName, socketId: socket.id });
-    room.sockets[socket.id] = room.players.length - 1;
+    const myIndex = room.players.length - 1;
+    room.sockets[socket.id] = myIndex;
     socket.join(roomCode);
     socket.data.roomCode = roomCode;
-    socket.data.playerIndex = room.players.length - 1;
+    socket.data.playerIndex = myIndex;
+
+    // Tell this player their index
+    socket.emit('joined_as', { index: myIndex });
 
     io.to(roomCode).emit('lobby_update', {
       players: room.players.map(p => p.name),
