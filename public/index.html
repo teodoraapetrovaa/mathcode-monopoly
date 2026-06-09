@@ -128,7 +128,16 @@ body{font-family:'Arial Black',Arial,sans-serif;background:linear-gradient(135de
     <div style="font-size:13px;color:#fff;font-weight:700;text-align:center">Код на стаята — споделете с приятелите:</div>
     <div class="room-code-display" id="room-code-show"></div>
     <div id="lobby-players"></div>
-    <div id="lobby-status">Чакаме играчи... (мин. 2, макс. 4)</div>
+    <div id="lobby-status">Чакаме играчи... (мин. 1, макс. 4)</div>
+    <div id="bot-row" style="display:none;width:100%;flex-direction:column;gap:6px">
+      <div style="font-size:12px;color:#ffe0f0;font-weight:700">🤖 Добави роботи за останалите места:</div>
+      <select id="bot-select" style="font-size:13px;padding:7px 10px;border:2px solid rgba(255,255,255,0.4);border-radius:10px;background:rgba(255,255,255,0.2);color:#fff;outline:none;width:100%">
+        <option value="0">Без роботи</option>
+        <option value="1">1 робот</option>
+        <option value="2">2 робота</option>
+        <option value="3">3 робота</option>
+      </select>
+    </div>
     <button class="btn-yellow" id="start-btn" disabled>▶ Започни играта (само домакинът)</button>
   </div>
 </div>
@@ -254,7 +263,8 @@ document.getElementById('join-btn').addEventListener('click',()=>{
 });
 
 document.getElementById('start-btn').addEventListener('click',()=>{
-  socket.emit('start_game',{roomCode:myRoomCode});
+  const botCount = parseInt(document.getElementById('bot-select').value) || 0;
+  socket.emit('start_game',{roomCode:myRoomCode, botCount});
 });
 
 socket.on('lobby_update',({players, count})=>{
@@ -262,9 +272,21 @@ socket.on('lobby_update',({players, count})=>{
   document.getElementById('room-code-show').textContent = myRoomCode;
   const lp = document.getElementById('lobby-players');
   lp.innerHTML = players.map((p,i)=>`<div class="lobby-player">${['🔴','🔵','🟢','🟡'][i]} ${p}${i===0?' 👑 (домакин)':''}</div>`).join('');
-  document.getElementById('lobby-status').textContent = count < 2 ? `Чакаме играчи... (${count}/4, мин. 2)` : `${count}/4 играчи — готови за старт!`;
-  if(isHost) document.getElementById('start-btn').disabled = count < 2;
-  // Set my player index
+  document.getElementById('lobby-status').textContent = `${count}/4 играчи в стаята`;
+  // Update bot options based on how many humans are in
+  if(isHost){
+    document.getElementById('bot-row').style.display='flex';
+    const botSel = document.getElementById('bot-select');
+    botSel.innerHTML = '';
+    const maxBots = 4 - count;
+    for(let i=0;i<=maxBots;i++){
+      const opt=document.createElement('option');
+      opt.value=i;opt.textContent=i===0?'Без роботи':`${i} робот${i>1?'а':''}`;
+      botSel.appendChild(opt);
+    }
+    // Always allow start (at least 1 human)
+    document.getElementById('start-btn').disabled = false;
+  }
   myPlayerIndex = count - 1;
 });
 
