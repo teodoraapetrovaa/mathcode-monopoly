@@ -249,18 +249,21 @@ document.getElementById('create-btn').addEventListener('click',()=>{
   const code = randomRoomCode();
   myRoomCode = code;
   isHost = true;
+  myPlayerIndex = 0;
   socket.emit('join_room',{roomCode:code, playerName:name});
 });
 
 document.getElementById('join-btn').addEventListener('click',()=>{
   const name = document.getElementById('player-name').value.trim();
-  const code = document.getElementById('room-input').value.trim().toUpperCase();
+  const code = document.getElementById('room-input').value.trim();
   if(!name){showError('Въведи твоето име!');return;}
   if(!code){showError('Въведи код на стая!');return;}
   myRoomCode = code;
   isHost = false;
   socket.emit('join_room',{roomCode:code, playerName:name});
 });
+
+socket.on('joined_as',({index})=>{ myPlayerIndex = index; });
 
 document.getElementById('start-btn').addEventListener('click',()=>{
   const botCount = parseInt(document.getElementById('bot-select').value) || 0;
@@ -273,21 +276,20 @@ socket.on('lobby_update',({players, count})=>{
   const lp = document.getElementById('lobby-players');
   lp.innerHTML = players.map((p,i)=>`<div class="lobby-player">${['🔴','🔵','🟢','🟡'][i]} ${p}${i===0?' 👑 (домакин)':''}</div>`).join('');
   document.getElementById('lobby-status').textContent = `${count}/4 играчи в стаята`;
-  // Update bot options based on how many humans are in
   if(isHost){
     document.getElementById('bot-row').style.display='flex';
     const botSel = document.getElementById('bot-select');
     botSel.innerHTML = '';
     const maxBots = 4 - count;
-    for(let i=0;i<=maxBots;i++){
+    const minBots = count === 1 ? 1 : 0;
+    for(let i=minBots;i<=maxBots;i++){
       const opt=document.createElement('option');
-      opt.value=i;opt.textContent=i===0?'Без роботи':`${i} робот${i>1?'а':''}`;
+      opt.value=i;
+      opt.textContent=i===0?'Без роботи':(i===1?'1 робот':`${i} робота`);
       botSel.appendChild(opt);
     }
-    // Always allow start (at least 1 human)
     document.getElementById('start-btn').disabled = false;
   }
-  myPlayerIndex = count - 1;
 });
 
 socket.on('error_msg',(msg)=>showError(msg));
